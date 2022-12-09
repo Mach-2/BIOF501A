@@ -1,0 +1,110 @@
+rule all: 
+    input: 
+        "Metagenome.krona.html"
+        
+rule Krona_html:
+    conda: 
+        "envs/conda.yaml"
+    input: 
+        krona_text="b_krona_txt/SRR13912812.b.krona.txt"
+    output:
+        "Metagenome.krona.html"
+    shell: 
+        """
+        ktImportText {input} -o {output}
+        """
+
+rule kraken2krona: 
+    input: 
+        "bracken_outputs/SRR13912812.bracken",
+        breport="breports/SRR13912812.breport",
+        KrakenTools="KrakenTools"
+    output: 
+        "b_krona_txt/SRR13912812.b.krona.txt"
+    shell: 
+        """
+        python {input.KrakenTools}/kreport2krona.py -r {input.breport} -o {output} --no-intermediate-ranks
+        """
+        
+rule run_bracken:
+    conda: 
+        "envs/conda.yaml"
+    input: 
+        "kreports/SRR13912812.k2report"
+    output:
+        bracken="bracken_outputs/SRR13912812.bracken",
+        breport="breports/SRR13912812.breport"
+    params: 
+        data = "data/k2_db"
+    shell: 
+        """
+        bracken -d {params.data} -i {input} -r 100 -l S -t 10 -o {output.bracken} -w {output.breport}
+        """
+        
+
+rule run_kraken: 
+    conda:
+        "envs/conda.yaml"
+    input: 
+        "data/k2_db/hash.k2d",
+        "data/k2_db/opts.k2d",
+        "data/k2_db/taxo.k2d",
+        "data/k2_db/seqid2taxid.map",
+        "data/k2_db/inspect.txt",
+        "data/k2_db/database100mers.kmer_distrib",
+        "data/k2_db/database150mers.kmer_distrib",
+        "data/k2_db/database200mers.kmer_distrib",
+        "data/k2_db/database250mers.kmer_distrib",
+        "data/k2_db/database300mers.kmer_distrib",
+        "data/k2_db/database50mers.kmer_distrib",
+        "data/k2_db/database75mers.kmer_distrib",
+        query = "workflow/reads/SRR13912812.fastq"
+    output:
+        "kreports/SRR13912812.k2report"
+    params:
+        data = "data/k2_db"
+    shell: 
+        """
+        kraken2 --db {params.data} --threads 8 --report {output} {input.query}
+        """
+   
+rule unpack_kraken_db: 
+    input: 
+        "data/k2_db/kraken_db.tar.gz"
+    output: 
+        "data/k2_db/hash.k2d",
+        "data/k2_db/opts.k2d",
+        "data/k2_db/taxo.k2d",
+        "data/k2_db/seqid2taxid.map",
+        "data/k2_db/inspect.txt",
+        "data/k2_db/database100mers.kmer_distrib",
+        "data/k2_db/database150mers.kmer_distrib",
+        "data/k2_db/database200mers.kmer_distrib",
+        "data/k2_db/database250mers.kmer_distrib",
+        "data/k2_db/database300mers.kmer_distrib",
+        "data/k2_db/database50mers.kmer_distrib",
+        "data/k2_db/database75mers.kmer_distrib"
+    params: 
+        data = "data/k2_db/"
+        
+    shell: 
+        """
+        tar -xzvf {input} -C {params.data}
+        """
+
+rule download_kraken_db: 
+    output: 
+        "data/k2_db/kraken_db.tar.gz" 
+    shell: 
+        """ 
+        wget https://genome-idx.s3.amazonaws.com/kraken/k2_standard_eupath_20201202.tar.gz -O {output}
+        """
+
+rule get_KrakenTools: 
+    output: 
+       directory("KrakenTools/")
+    shell: 
+        """
+        git clone https://github.com/jenniferlu717/KrakenTools
+        """
+        
