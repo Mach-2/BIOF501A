@@ -2,7 +2,7 @@
 
 Write project notes here tomorrow. Sleepy for now. 
 
-## 
+## Background and Rationale
 • include the what’s and why’s – also your aims
 • include any package dependencies that are required (bullet points are ok for this)
 • You can include your DAG here
